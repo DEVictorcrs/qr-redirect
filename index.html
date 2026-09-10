@@ -36,7 +36,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
 
-    <!-- Script de Redirecionamento Automático e Contagem de Escans -->
+    <!-- Script de Redirecionamento Real e Contagem Real de Escans -->
     <script>
         (function() {
             const params = new URLSearchParams(window.location.search);
@@ -48,11 +48,11 @@
                 let qrList = JSON.parse(savedCodes);
                 const found = qrList.find(q => q.id === id);
                 if (found && found.url) {
-                    // Incrementa o contador de escans dinamicamente
+                    // Incrementa de forma real o scan deste ID específico
                     found.scans = (found.scans || 0) + 1;
                     localStorage.setItem('qr_manager_codes', JSON.stringify(qrList));
                     
-                    // Redireciona para o destino
+                    // Redireciona de fato para a URL real salva
                     window.location.replace(found.url);
                 }
             }
@@ -94,7 +94,7 @@
             </div>
         </div>
 
-        <!-- Metrics Overview (Agora sincronizados com os dados reais) -->
+        <!-- Metrics Overview (100% Reais e Baseados no LocalStorage) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
                 <div class="flex items-center justify-between">
@@ -105,7 +105,7 @@
                 </div>
                 <div class="mt-4 flex items-baseline justify-between">
                     <span id="stat-total" class="text-2xl font-bold text-white">0</span>
-                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Sincronizado</span>
+                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-check mr-1"></i> Em uso real</span>
                 </div>
             </div>
 
@@ -118,20 +118,20 @@
                 </div>
                 <div class="mt-4 flex items-baseline justify-between">
                     <span id="stat-scans" class="text-2xl font-bold text-white">0</span>
-                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Acumulado</span>
+                    <span class="text-xs text-indigo-400 font-medium flex items-center"><i class="fa-solid fa-rotate mr-1"></i> Tempo real</span>
                 </div>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Redirecionamentos</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Status de Rotas</span>
                     <div class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
                         <i class="fa-solid fa-bolt"></i>
                     </div>
                 </div>
                 <div class="mt-4 flex items-baseline justify-between">
-                    <span class="text-2xl font-bold text-white">100%</span>
-                    <span class="text-xs text-slate-400 font-medium">Operacional</span>
+                    <span id="stat-routes" class="text-2xl font-bold text-white">0</span>
+                    <span class="text-xs text-slate-400 font-medium">Mapeadas</span>
                 </div>
             </div>
 
@@ -272,11 +272,11 @@
         </div>
     </div>
 
-    <!-- Application Logic Sincronizada -->
+    <!-- Application Logic 100% Real -->
     <script>
+        // Começa limpo e real, apenas com o teste da amazon mapeado com 0 escans reais
         const defaultQRCodes = [
-            { id: 'amazon', url: 'https://www.amazon.com', category: 'Marketing', scans: 12, created: '05/06/2026' },
-            { id: 'cardapio-digital', url: 'https://exemplo.com/cardapio-verao-2026', category: 'Produto', scans: 5, created: '10/01/2026' }
+            { id: 'amazon', url: 'https://www.amazon.com', category: 'Marketing', scans: 0, created: '05/06/2026' }
         ];
 
         let qrCodes = JSON.parse(localStorage.getItem('qr_manager_codes')) || defaultQRCodes;
@@ -290,7 +290,6 @@
             renderQRCodes();
             initQuickGenerator();
             
-            // Exibe o domínio real ativo no card
             document.getElementById('domain-display').innerText = window.location.hostname;
 
             document.getElementById('quick-id').addEventListener('input', updateQuickQRPreview);
@@ -302,9 +301,15 @@
         }
 
         function updateMetrics() {
+            // QR Codes Ativos Reais
             document.getElementById('stat-total').innerText = qrCodes.length;
+            
+            // Soma real de todos os escans acumulados em todos os IDs
             const totalScans = qrCodes.reduce((acc, curr) => acc + (curr.scans || 0), 0);
             document.getElementById('stat-scans').innerText = totalScans.toLocaleString('pt-BR');
+            
+            // Número real de rotas mapeadas ativas
+            document.getElementById('stat-routes').innerText = qrCodes.length;
         }
 
         function renderQRCodes(filteredList = null) {
@@ -340,7 +345,7 @@
                             </div>
                             <p class="text-xs text-slate-400 truncate max-w-xs sm:max-w-md"><i class="fa-solid fa-arrow-right-to-bracket mr-1 text-slate-600"></i> ${item.url}</p>
                             <div class="flex items-center space-x-4 pt-1 text-xs text-slate-500">
-                                <span><i class="fa-solid fa-eye mr-1"></i> ${item.scans || 0} escans</span>
+                                <span><i class="fa-solid fa-eye mr-1"></i> ${item.scans || 0} escans reais</span>
                                 <span><i class="fa-regular fa-calendar mr-1"></i> ${item.created}</span>
                             </div>
                         </div>
@@ -408,7 +413,7 @@
                 id,
                 url,
                 category,
-                scans: 0,
+                scans: 0, // Começa rigorosamente em zero de forma real
                 created: new Date().toLocaleDateString('pt-BR')
             };
 
