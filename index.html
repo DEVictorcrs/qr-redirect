@@ -49,7 +49,6 @@
                         const qrList = JSON.parse(savedCodes);
                         const found = qrList.find(q => q.id === qrId);
                         if (found && found.url) {
-                            // Incrementa o scan e redireciona de imediato para o destino final
                             found.scans = (found.scans || 0) + 1;
                             localStorage.setItem('qr_manager_codes', JSON.stringify(qrList));
                             window.location.replace(found.url);
@@ -166,7 +165,7 @@
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                             <i class="fa-solid fa-search"></i>
                         </span>
-                        <input type="text" id="search-input" onkeyup="filterQRCodes()" placeholder="Buscar por ID ou URL..." class="w-full sm:w-64 bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+                        <input type="text" id="search-input" onkeyup="filterQRCodes()" placeholder="Buscar por ID, Label ou URL..." class="w-full sm:w-72 bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
                     </div>
                 </div>
 
@@ -196,16 +195,21 @@
                     
                     <form id="quick-form" onsubmit="handleQuickCreate(event)" class="space-y-4">
                         <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Label / Apelido (Loja / Cliente)</label>
+                            <input type="text" id="quick-label" required placeholder="ex: Loja Shopping Centro" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                        </div>
+
+                        <div>
                             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">ID / Slug Personalizado</label>
                             <div class="flex rounded-xl shadow-sm">
                                 <span class="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-slate-700 bg-slate-800 text-slate-400 text-xs font-medium">?id=</span>
-                                <input type="text" id="quick-id" required placeholder="ex: amazon" class="flex-1 bg-slate-950 border border-slate-700 rounded-r-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                                <input type="text" id="quick-id" required placeholder="ex: loja-centro" class="flex-1 bg-slate-950 border border-slate-700 rounded-r-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">URL de Destino</label>
-                            <input type="url" id="quick-url" required placeholder="https://www.amazon.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                            <input type="url" id="quick-url" required placeholder="https://www.site-do-cliente.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
                         </div>
 
                         <div>
@@ -226,7 +230,7 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-xl transition shadow-lg shadow-indigo-600/20 active:scale-95 flex items-center justify-center space-x-2">
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-xl transition shadow-lg shadow-indigo-600/25 active:scale-95 flex items-center justify-center space-x-2">
                             <i class="fa-solid fa-plus-circle"></i>
                             <span>Salvar & Ativar QR Code</span>
                         </button>
@@ -236,7 +240,7 @@
         </div>
     </main>
 
-    <!-- Modal para Visualizar o QR Code ("Olhinho") -->
+    <!-- Modal para Visualizar o QR Code ("Olhinho") com Download PNG -->
     <div id="view-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative space-y-5 text-center">
             <div class="flex items-center justify-between">
@@ -252,11 +256,18 @@
             <div class="bg-white p-4 rounded-2xl inline-block shadow-inner" id="modal-view-qrcode"></div>
             
             <div>
+                <p id="modal-view-label" class="text-sm font-bold text-white mb-0.5"></p>
                 <p id="modal-view-id" class="text-xs font-mono text-indigo-400 font-semibold mb-1"></p>
                 <p id="modal-view-url" class="text-xs text-slate-400 truncate"></p>
             </div>
 
-            <button onclick="closeViewModal()" class="w-full py-2.5 rounded-xl text-sm font-medium bg-slate-800 hover:bg-slate-700 text-white transition">Fechar</button>
+            <div class="space-y-2">
+                <button onclick="downloadQRCodePNG()" class="w-full py-2.5 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Baixar QR Code (PNG)</span>
+                </button>
+                <button onclick="closeViewModal()" class="w-full py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Fechar</button>
+            </div>
         </div>
     </div>
 
@@ -299,10 +310,10 @@
         </div>
     </div>
 
-    <!-- Application Logic -->
+    <!-- Application Logic Completa com Label e Download PNG -->
     <script>
         const defaultQRCodes = [
-            { id: 'exemplo1', url: 'https://www.amazon.com', category: 'Produto', scans: 0, created: '10/09/2026' }
+            { id: 'exemplo1', label: 'Loja Exemplo Centro', url: 'https://www.amazon.com.br', category: 'Produto', scans: 0, created: '10/09/2026' }
         ];
 
         let qrCodes = JSON.parse(localStorage.getItem('qr_manager_codes')) || defaultQRCodes;
@@ -362,9 +373,10 @@
                         </div>
                         <div class="space-y-1">
                             <div class="flex items-center space-x-2">
-                                <span class="text-sm font-bold text-white font-mono">?id=${item.id}</span>
+                                <span class="text-sm font-bold text-white">${item.label || 'Sem Apelido'}</span>
                                 <span class="text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full">${item.category}</span>
                             </div>
+                            <p class="text-xs text-indigo-300 font-mono">?id=${item.id}</p>
                             <p class="text-xs text-slate-400 truncate max-w-xs sm:max-w-md"><i class="fa-solid fa-arrow-right-to-bracket mr-1 text-slate-600"></i> ${item.url}</p>
                             <div class="flex items-center space-x-4 pt-1 text-xs text-slate-500">
                                 <span><i class="fa-solid fa-eye mr-1"></i> ${item.scans || 0} escans</span>
@@ -374,11 +386,11 @@
                     </div>
 
                     <div class="flex items-center space-x-2 w-full md:w-auto justify-end pt-2 md:pt-0 border-t border-slate-800/60 md:border-t-0">
-                        <button onclick="openViewModal('${item.id}')" title="Visualizar QR Code" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 transition text-xs flex items-center space-x-1.5">
+                        <button onclick="openViewModal('${item.id}')" title="Visualizar e Baixar QR" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 transition text-xs flex items-center space-x-1.5">
                             <i class="fa-solid fa-eye"></i>
                             <span class="hidden sm:inline">Ver QR</span>
                         </button>
-                        <button onclick="copyToClipboard('${fullLink}', 'Link completo copiado!')" title="Copiar Link para QR Code" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs flex items-center space-x-1.5">
+                        <button onclick="copyToClipboard('${fullLink}', 'Link completo copiado!')" title="Copiar Link" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs flex items-center space-x-1.5">
                             <i class="fa-regular fa-copy"></i>
                             <span class="hidden sm:inline">Copiar Link</span>
                         </button>
@@ -386,7 +398,7 @@
                             <i class="fa-solid fa-external-link-alt"></i>
                             <span class="hidden sm:inline">Testar</span>
                         </a>
-                        <button onclick="openEditModal('${item.id}')" title="Editar QR Code" class="p-2.5 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 transition text-xs flex items-center space-x-1.5">
+                        <button onclick="openEditModal('${item.id}')" title="Editar Destino" class="p-2.5 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 transition text-xs flex items-center space-x-1.5">
                             <i class="fa-solid fa-pen"></i>
                             <span class="hidden sm:inline">Editar</span>
                         </button>
@@ -424,11 +436,12 @@
 
         function handleQuickCreate(e) {
             e.preventDefault();
+            const label = document.getElementById('quick-label').value.trim();
             const id = document.getElementById('quick-id').value.trim().toLowerCase().replace(/\s+/g, '-');
             const url = document.getElementById('quick-url').value.trim();
             const category = document.getElementById('quick-category').value;
 
-            if (!id || !url) return;
+            if (!id || !url || !label) return;
 
             if (qrCodes.some(q => q.id === id)) {
                 showToast("Erro", "Este ID/Slug já está em uso.", "error");
@@ -437,6 +450,7 @@
 
             const newQR = {
                 id,
+                label,
                 url,
                 category,
                 scans: 0,
@@ -450,27 +464,31 @@
             document.getElementById('quick-form').reset();
             initQuickGenerator();
             
-            showToast("Criado com sucesso!", `O ID '?id=${id}' foi salvo e ativado.`);
+            showToast("Criado com sucesso!", `O QR code para '${label}' foi ativado.`);
         }
 
         function openNewModal() {
-            document.getElementById('quick-id').focus();
+            document.getElementById('quick-label').focus();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // Funções do Modal "Olhinho" com opção de download em PNG
+        let currentViewingId = '';
         function openViewModal(id) {
             const item = qrCodes.find(q => q.id === id);
             if (!item) return;
 
+            currentViewingId = item.id;
+            document.getElementById('modal-view-label').innerText = item.label;
             document.getElementById('modal-view-id').innerText = `?id=${item.id}`;
             document.getElementById('modal-view-url').innerText = item.url;
 
             const modalViewEl = document.getElementById('modal-view-qrcode');
             modalViewEl.innerHTML = '';
-            viewQrInstance = new QRCode(modalViewEl, {
+            new QRCode(modalViewEl, {
                 text: `${baseUrl}?id=${item.id}`,
-                width: 160,
-                height: 160,
+                width: 180,
+                height: 180,
                 colorDark: "#0f172a",
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.H
@@ -483,6 +501,31 @@
         function closeViewModal() {
             document.getElementById('view-modal').classList.remove('flex');
             document.getElementById('view-modal').classList.add('hidden');
+        }
+
+        // Função para baixar o QR code em PNG de alta qualidade
+        function downloadQRCodePNG() {
+            const qrCanvasImg = document.querySelector('#modal-view-qrcode img');
+            const qrCanvasTag = document.querySelector('#modal-view-qrcode canvas');
+            
+            let imageUrl = "";
+            if (qrCanvasImg && qrCanvasImg.src) {
+                imageUrl = qrCanvasImg.src;
+            } else if (qrCanvasTag) {
+                imageUrl = qrCanvasTag.toDataURL("image/png");
+            }
+
+            if (imageUrl) {
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                link.download = `qrcode-${currentViewingId}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast("Sucesso", "QR Code baixado em PNG!");
+            } else {
+                showToast("Erro", "Não foi possível gerar a imagem.", "error");
+            }
         }
 
         function deleteQRCode(id) {
@@ -504,7 +547,7 @@
 
             const modalQEl = document.getElementById('modal-qrcode');
             modalQEl.innerHTML = '';
-            modalQrInstance = new QRCode(modalQEl, {
+            new QRCode(modalQEl, {
                 text: `${baseUrl}?id=${item.id}`,
                 width: 120,
                 height: 120,
@@ -540,7 +583,11 @@
 
         function filterQRCodes() {
             const query = document.getElementById('search-input').value.toLowerCase();
-            const filtered = qrCodes.filter(q => q.id.toLowerCase().includes(query) || q.url.toLowerCase().includes(query));
+            const filtered = qrCodes.filter(q => 
+                (q.id && q.id.toLowerCase().includes(query)) || 
+                (q.label && q.label.toLowerCase().includes(query)) || 
+                (q.url && q.url.toLowerCase().includes(query))
+            );
             renderQRCodes(filtered);
         }
 
