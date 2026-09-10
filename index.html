@@ -36,36 +36,33 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
 
-    <!-- Script de Redirecionamento Dinâmico Robusto (Lê da memória local e de rotas padrão) -->
+    <!-- Script de Redirecionamento Universal para qualquer ID numérico -->
     <script>
         (function() {
             const urlParams = new URLSearchParams(window.location.search);
             const qrId = urlParams.get("id");
             
             if (qrId) {
-                // Lista padrão integrada para garantir fallback imediato caso limpem o storage
+                // Rotas essenciais padrão de segurança
                 const rotasPadrao = {
-                    "exemplo1": "https://www.amazon.com.br",
+                    "1": "https://www.amazon.com.br",
                     "2": "https://www.magazineluiza.com.br"
                 };
 
                 let destino = rotasPadrao[qrId];
 
-                // Tenta buscar também do armazenamento local persistido
+                // Busca dinâmica no armazenamento persistido do navegador
                 const savedCodes = localStorage.getItem('qr_manager_codes');
                 if (savedCodes) {
                     try {
                         const qrList = JSON.parse(savedCodes);
-                        const found = qrList.find(q => q.id === qrId);
+                        const found = qrList.find(q => String(q.id) === String(qrId));
                         if (found && found.url) {
                             destino = found.url;
-                            // Incrementa o scan localmente se estiver no mesmo navegador
                             found.scans = (found.scans || 0) + 1;
                             localStorage.setItem('qr_manager_codes', JSON.stringify(qrList));
                         }
-                    } catch (e) {
-                        console.error("Erro ao ler rotas locais", e);
-                    }
+                    } catch (e) {}
                 }
 
                 if (destino) {
@@ -121,7 +118,7 @@
                 </div>
                 <div class="mt-4 flex items-baseline justify-between">
                     <span id="stat-total" class="text-2xl font-bold text-white">0</span>
-                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-check mr-1"></i> Em uso real</span>
+                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-check mr-1"></i> Ilimitados</span>
                 </div>
             </div>
 
@@ -210,14 +207,14 @@
                     <form id="quick-form" onsubmit="handleQuickCreate(event)" class="space-y-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Label / Apelido (Loja / Cliente)</label>
-                            <input type="text" id="quick-label" required placeholder="ex: Magalu Centro" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                            <input type="text" id="quick-label" required placeholder="ex: Loja Cliente 105" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">ID / Slug Personalizado</label>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">ID / Número (Ex: 1, 150, 10000)</label>
                             <div class="flex rounded-xl shadow-sm">
                                 <span class="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-slate-700 bg-slate-800 text-slate-400 text-xs font-medium">?id=</span>
-                                <input type="text" id="quick-id" required placeholder="ex: 2" class="flex-1 bg-slate-950 border border-slate-700 rounded-r-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                                <input type="text" id="quick-id" required placeholder="ex: 150" class="flex-1 bg-slate-950 border border-slate-700 rounded-r-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
                             </div>
                         </div>
 
@@ -327,7 +324,7 @@
     <!-- Application Logic -->
     <script>
         const defaultQRCodes = [
-            { id: 'exemplo1', label: 'Loja Exemplo Centro', url: 'https://www.amazon.com.br', category: 'Produto', scans: 0, created: '10/09/2026' },
+            { id: '1', label: 'Amazon Loja 1', url: 'https://www.amazon.com.br', category: 'Marketing', scans: 0, created: '10/09/2026' },
             { id: '2', label: 'Magalu', url: 'https://www.magazineluiza.com.br', category: 'Marketing', scans: 0, created: '10/09/2026' }
         ];
 
@@ -430,7 +427,7 @@
             const previewEl = document.getElementById('qrcode');
             previewEl.innerHTML = '';
             quickQrInstance = new QRCode(previewEl, {
-                text: baseUrl + "?id=exemplo",
+                text: baseUrl + "?id=1",
                 width: 140,
                 height: 140,
                 colorDark: "#0f172a",
@@ -441,7 +438,7 @@
 
         function updateQuickQRPreview() {
             const idVal = document.getElementById('quick-id').value.trim();
-            const target = idVal ? `${baseUrl}?id=${idVal}` : `${baseUrl}?id=exemplo`;
+            const target = idVal ? `${baseUrl}?id=${idVal}` : `${baseUrl}?id=1`;
             
             if (quickQrInstance) {
                 quickQrInstance.clear();
@@ -459,7 +456,7 @@
             if (!id || !url || !label) return;
 
             if (qrCodes.some(q => q.id === id)) {
-                showToast("Erro", "Este ID/Slug já está em uso.", "error");
+                showToast("Erro", "Este ID/Número já está em uso.", "error");
                 return;
             }
 
@@ -656,10 +653,10 @@
 
             if (type === "error") {
                 iconEl.className = "w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center";
-                iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                iconEl.innerHTML = '<i></i>';
             } else {
                 iconEl.className = "w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center";
-                iconEl.innerHTML = '<i class="fa-solid fa-check"></i>';
+                iconEl.innerHTML = '<i></i>';
             }
 
             toast.classList.remove('translate-y-24', 'opacity-0');
