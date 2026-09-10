@@ -1,33 +1,550 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecionando...</title>
+    <title>Painel de QR Codes & Central de Redirecionamento</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Dicionário de rotas: associe cada ID ao seu respectivo link de destino
-        const rotas = {
-            "1": "https://www.google.com",
-            "2": "https://github.com",
-            "3": "https://stackoverflow.com"
-            // Adicione novos IDs e links aqui conforme necessário
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- QR Code Generator Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-qrcode text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight text-white">QR Manager Pro</h1>
+                    <p class="text-xs text-slate-400">Painel Central de Redirecionamento</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="openNewModal()" class="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition shadow-lg shadow-indigo-600/20 active:scale-95">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Novo QR Code</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- Notification Banner -->
+        <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3">
+            <div id="toast-icon" class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <div>
+                <p id="toast-title" class="text-sm font-semibold">Sucesso!</p>
+                <p id="toast-desc" class="text-xs text-slate-400">Ação realizada com sucesso.</p>
+            </div>
+        </div>
+
+        <!-- Metrics Overview -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">QR Codes Ativos</span>
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-baseline justify-between">
+                    <span id="stat-total" class="text-2xl font-bold text-white">0</span>
+                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Atualizado</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total de Escans</span>
+                    <div class="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-baseline justify-between">
+                    <span id="stat-scans" class="text-2xl font-bold text-white">1,482</span>
+                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +12% hoje</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Redirecionamentos</span>
+                    <div class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-baseline justify-between">
+                    <span class="text-2xl font-bold text-white">99.9%</span>
+                    <span class="text-xs text-slate-400 font-medium">Uptime Estável</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Domínio Ativo</span>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                        <i class="fa-solid fa-globe"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-baseline justify-between">
+                    <span class="text-sm font-semibold text-emerald-400 truncate">qr.meusite.com</span>
+                    <span class="text-xs text-slate-400">SSL Ativo</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Workspace Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left 2 Cols: QR Codes List -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">QR Codes Ativos</h2>
+                        <p class="text-sm text-slate-400">Gerencie e teste seus links de redirecionamento dinâmico.</p>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-search"></i>
+                        </span>
+                        <input type="text" id="search-input" onkeyup="filterQRCodes()" placeholder="Buscar por ID ou URL..." class="w-full sm:w-64 bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+
+                <!-- List Container -->
+                <div id="qr-list-container" class="space-y-4">
+                    <!-- Dynamic Items will be rendered here -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="hidden text-center py-16 bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-4 text-2xl">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-white">Nenhum QR code encontrado</h3>
+                    <p class="text-sm text-slate-400 mt-1">Crie seu primeiro código QR dinâmico agora mesmo.</p>
+                    <button onclick="openNewModal()" class="mt-4 inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Adicionar QR Code</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Col: Quick Generator & Preview Assistant -->
+            <div class="space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm sticky top-24">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-bold text-white flex items-center">
+                            <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 mr-2"></i>
+                            Gerador Instantâneo
+                        </h3>
+                        <span class="text-xs bg-indigo-500/10 text-indigo-400 font-medium px-2.5 py-1 rounded-full">Pré-visualização</span>
+                    </div>
+                    
+                    <form id="quick-form" onsubmit="handleQuickCreate(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">ID / Slug Personalizado</label>
+                            <div class="flex rounded-xl shadow-sm">
+                                <span class="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-slate-700 bg-slate-800 text-slate-400 text-xs font-medium">qr/</span>
+                                <input type="text" id="quick-id" required placeholder="ex: evento-2026" class="flex-1 bg-slate-950 border border-slate-700 rounded-r-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">URL de Destino</label>
+                            <input type="url" id="quick-url" required placeholder="https://seu-destino.com/pagina" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Categoria</label>
+                            <select id="quick-category" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition">
+                                <option value="Marketing">Marketing / Campanhas</option>
+                                <option value="Produto">Ficha de Produto</option>
+                                <option value="Social">Redes Sociais / Contato</option>
+                                <option value="Evento">Eventos & Ingressos</option>
+                            </select>
+                        </div>
+
+                        <!-- Visual QR Canvas Preview Area -->
+                        <div class="pt-2">
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">QR Code Preview Dinâmico</label>
+                            <div id="qr-preview-box" class="w-full aspect-square bg-slate-950 border border-slate-800 rounded-2xl flex flex-col items-center justify-center p-4 relative overflow-hidden group">
+                                <div id="qrcode" class="bg-white p-3 rounded-xl shadow-md transition transform group-hover:scale-105"></div>
+                                <span id="preview-hint" class="text-xs text-slate-500 mt-3 text-center">Preencha os campos para gerar o código</span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-xl transition shadow-lg shadow-indigo-600/20 active:scale-95 flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Salvar & Ativar QR Code</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Quick Help / Instructions Card -->
+                <div class="bg-gradient-to-br from-slate-900 to-indigo-950/30 border border-slate-800 rounded-2xl p-5">
+                    <h4 class="text-sm font-bold text-white flex items-center mb-2">
+                        <i class="fa-solid fa-circle-info text-indigo-400 mr-2"></i>
+                        Como funciona o redirecionamento?
+                    </h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Cada QR gerado aponta para o nosso link dinâmico curto (ex: <code class="text-indigo-300 font-mono">qr.meusite.com/seu-id</code>). Você pode alterar a URL de destino a qualquer momento neste painel sem precisar reimprimir o QR code físico!
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Modal for Detailed View / Editing URL -->
+    <div id="edit-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-white flex items-center">
+                    <i class="fa-solid fa-pen-to-square text-indigo-400 mr-2"></i>
+                    Editar Destino do QR
+                </h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-white transition w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="edit-original-id">
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Identificador (ID)</label>
+                    <input type="text" id="edit-id-display" disabled class="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-400 cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Nova URL de Destino</label>
+                    <input type="url" id="edit-url-input" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition">
+                </div>
+
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center">
+                    <div id="modal-qrcode" class="bg-white p-2 rounded-lg"></div>
+                    <span class="text-xs text-slate-500 mt-2">Visualização Atualizada</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-3 pt-2">
+                <button onclick="closeEditModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 transition">Cancelar</button>
+                <button onclick="saveEditedQRCode()" class="px-4 py-2 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-lg shadow-indigo-600/20">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // Initial Mock Database
+        let qrCodes = [
+            {
+                id: 'cardapio-digital',
+                url: 'https://exemplo.com/cardapio-verao-2026',
+                category: 'Produto',
+                scans: 642,
+                created: '10/01/2026'
+            },
+            {
+                id: 'promocao-insta',
+                url: 'https://instagram.com/suamarca',
+                category: 'Social',
+                scans: 512,
+                created: '14/02/2026'
+            },
+            {
+                id: 'pesquisa-satisfacao',
+                url: 'https://forms.gle/exemploSatisfacao',
+                category: 'Marketing',
+                scans: 328,
+                created: '01/03/2026'
+            }
+        ];
+
+        let quickQrInstance = null;
+        let modalQrInstance = null;
+
+        // Initialize App on Load
+        window.onload = function() {
+            renderQRCodes();
+            initQuickGenerator();
+            
+            // Listeners for live quick generator updates
+            document.getElementById('quick-id').addEventListener('input', updateQuickQRPreview);
+            document.getElementById('quick-url').addEventListener('input', updateQuickQRPreview);
         };
 
-        function redirecionar() {
-            const params = new URLSearchParams(window.location.search);
-            const id = params.get("id");
+        // Render QR Codes list
+        function renderQRCodes(filteredList = null) {
+            const container = document.getElementById('qr-list-container');
+            const emptyState = document.getElementById('empty-state');
+            const list = filteredList || qrCodes;
+            
+            document.getElementById('stat-total').innerText = qrCodes.length;
 
-            if (id && rotas[id]) {
-                window.location.replace(rotas[id]);
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
             } else {
-                document.getElementById("mensagem").innerText = "ID inválido ou não encontrado.";
+                emptyState.classList.add('hidden');
+            }
+
+            list.forEach((item) => {
+                const shortLink = `https://qr.meusite.com/${item.id}`;
+                
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 hover:border-slate-700 transition rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4";
+                
+                card.innerHTML = `
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-indigo-400 font-bold text-lg">
+                            <i class="fa-solid fa-qrcode"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm font-bold text-white font-mono">/${item.id}</span>
+                                <span class="text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full">${item.category}</span>
+                            </div>
+                            <p class="text-xs text-slate-400 truncate max-w-xs sm:max-w-md"><i class="fa-solid fa-arrow-right-to-bracket mr-1 text-slate-600"></i> ${item.url}</p>
+                            <div class="flex items-center space-x-4 pt-1 text-xs text-slate-500">
+                                <span><i class="fa-solid fa-eye mr-1"></i> ${item.scans} escans</span>
+                                <span><i class="fa-regular fa-calendar mr-1"></i> ${item.created}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 w-full md:w-auto justify-end pt-2 md:pt-0 border-t border-slate-800/60 md:border-t-0">
+                        <button onclick="copyToClipboard('${shortLink}', 'Link copiado com sucesso!')" title="Copiar Link Curto" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs flex items-center space-x-1.5">
+                            <i class="fa-regular fa-copy"></i>
+                            <span class="hidden sm:inline">Copiar</span>
+                        </button>
+                        <a href="${item.url}" target="_blank" title="Testar Destino" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs flex items-center space-x-1.5">
+                            <i class="fa-solid fa-external-link-alt"></i>
+                            <span class="hidden sm:inline">Testar</span>
+                        </a>
+                        <button onclick="openEditModal('${item.id}')" title="Editar QR Code" class="p-2.5 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 transition text-xs flex items-center space-x-1.5">
+                            <i class="fa-solid fa-pen"></i>
+                            <span class="hidden sm:inline">Editar</span>
+                        </button>
+                        <button onclick="deleteQRCode('${item.id}')" title="Excluir" class="p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition text-xs">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Initialize Quick QR Code preview container
+        function initQuickGenerator() {
+            const previewEl = document.getElementById('qrcode');
+            previewEl.innerHTML = '';
+            quickQrInstance = new QRCode(previewEl, {
+                text: "https://qr.meusite.com/exemplo",
+                width: 140,
+                height: 140,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        // Update Quick preview live
+        function updateQuickQRPreview() {
+            const idVal = document.getElementById('quick-id').value.trim();
+            const urlVal = document.getElementById('quick-url').value.trim();
+            const target = urlVal || (idVal ? `https://qr.meusite.com/${idVal}` : "https://qr.meusite.com/exemplo");
+            
+            if (quickQrInstance) {
+                quickQrInstance.clear();
+                quickQrInstance.makeCode(target);
             }
         }
 
-        window.onload = redirecionar;
+        // Handle Quick Creation
+        function handleQuickCreate(e) {
+            e.preventDefault();
+            const id = document.getElementById('quick-id').value.trim().toLowerCase().replace(/\s+/g, '-');
+            const url = document.getElementById('quick-url').value.trim();
+            const category = document.getElementById('quick-category').value;
+
+            if (!id || !url) return;
+
+            // Check if ID already exists
+            if (qrCodes.some(q => q.id === id)) {
+                showToast("Erro", "Este ID/Slug já está em uso.", "error");
+                return;
+            }
+
+            const newQR = {
+                id,
+                url,
+                category,
+                scans: 0,
+                created: new Date().toLocaleDateString('pt-BR')
+            };
+
+            qrCodes.unshift(newQR);
+            renderQRCodes();
+            
+            // Reset form
+            document.getElementById('quick-form').reset();
+            initQuickGenerator();
+            
+            showToast("Criado com sucesso!", `O QR code 'qr.meusite.com/${id}' foi ativado.`);
+        }
+
+        // Open modal for new via top button
+        function openNewModal() {
+            document.getElementById('quick-id').focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast("Atenção", "Preencha o formulário de Gerador Instantâneo na lateral.", "info");
+        }
+
+        // Delete QR Code
+        function deleteQRCode(id) {
+            if (confirm(`Deseja realmente remover o QR code '${id}'?`)) {
+                qrCodes = qrCodes.filter(q => q.id !== id);
+                renderQRCodes();
+                showToast("Removido", "O QR code foi excluído com sucesso.");
+            }
+        }
+
+        // Edit Modal functions
+        function openEditModal(id) {
+            const item = qrCodes.find(q => q.id === id);
+            if (!item) return;
+
+            document.getElementById('edit-original-id').value = item.id;
+            document.getElementById('edit-id-display.value') = item.id;
+            document.getElementById('edit-id-display').value = item.id;
+            document.getElementById('edit-url-input').value = item.url;
+
+            const modalQEl = document.getElementById('modal-qrcode');
+            modalQEl.innerHTML = '';
+            modalQrInstance = new QRCode(modalQEl, {
+                text: item.url,
+                width: 120,
+                height: 120,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('edit-modal').classList.remove('hidden');
+            document.getElementById('edit-modal').classList.add('flex');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.remove('flex');
+            document.getElementById('edit-modal').classList.add('hidden');
+        }
+
+        function saveEditedQRCode() {
+            const id = document.getElementById('edit-original-id').value;
+            const newUrl = document.getElementById('edit-url-input').value.trim();
+
+            if (!newUrl) return;
+
+            const item = qrCodes.find(q => q.id === id);
+            if (item) {
+                item.url = newUrl;
+                renderQRCodes();
+                closeEditModal();
+                showToast("Atualizado!", `O destino do QR code '/${id}' foi atualizado.`);
+            }
+        }
+
+        // Filter list
+        function filterQRCodes() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const filtered = qrCodes.filter(q => q.id.toLowerCase().includes(query) || q.url.toLowerCase().includes(query));
+            renderQRCodes(filtered);
+        }
+
+        // Copy utility using legacy/safe execCommand fallback
+        function copyToClipboard(text, successMsg = "Copiado para a área de transferência!") {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.style.position = "fixed";  // Avoid scrolling to bottom
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Sucesso", successMsg);
+            } catch (err) {
+                showToast("Erro", "Não foi possível copiar o texto.", "error");
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // Toast Notification System
+        function showToast(title, desc, type = "success") {
+            const toast = document.getElementById('toast');
+            const titleEl = document.getElementById('toast-title');
+            const descEl = document.getElementById('toast-desc');
+            const iconEl = document.getElementById('toast-icon');
+
+            titleEl.innerText = title;
+            descEl.innerText = desc;
+
+            if (type === "error") {
+                iconEl.className = "w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center";
+                iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            } else if (type === "info") {
+                iconEl.className = "w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center";
+                iconEl.innerHTML = '<i class="fa-solid fa-info"></i>';
+            } else {
+                iconEl.className = "w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center";
+                iconEl.innerHTML = '<i class="fa-solid fa-check"></i>';
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3500);
+        }
     </script>
-</head>
-<body>
-    <p id="mensagem" style="text-align: center; margin-top: 20vh; font-family: sans-serif; font-size: 18px;">Redirecionando...</p>
 </body>
 </html>
