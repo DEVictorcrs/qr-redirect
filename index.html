@@ -48,11 +48,8 @@
                 let qrList = JSON.parse(savedCodes);
                 const found = qrList.find(q => q.id === id);
                 if (found && found.url) {
-                    // Incrementa de forma real o scan deste ID específico
                     found.scans = (found.scans || 0) + 1;
                     localStorage.setItem('qr_manager_codes', JSON.stringify(qrList));
-                    
-                    // Redireciona de fato para a URL real salva
                     window.location.replace(found.url);
                 }
             }
@@ -94,7 +91,7 @@
             </div>
         </div>
 
-        <!-- Metrics Overview (100% Reais e Baseados no LocalStorage) -->
+        <!-- Metrics Overview -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
                 <div class="flex items-center justify-between">
@@ -233,6 +230,30 @@
         </div>
     </main>
 
+    <!-- Modal para Visualizar o QR Code ("Olhinho") -->
+    <div id="view-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative space-y-5 text-center">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-white flex items-center">
+                    <i class="fa-solid fa-qrcode text-indigo-400 mr-2"></i>
+                    Visualizar QR Code
+                </h3>
+                <button onclick="closeViewModal()" class="text-slate-400 hover:text-white transition w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl inline-block shadow-inner" id="modal-view-qrcode"></div>
+            
+            <div>
+                <p id="modal-view-id" class="text-xs font-mono text-indigo-400 font-semibold mb-1"></p>
+                <p id="modal-view-url" class="text-xs text-slate-400 truncate"></p>
+            </div>
+
+            <button onclick="closeViewModal()" class="w-full py-2.5 rounded-xl text-sm font-medium bg-slate-800 hover:bg-slate-700 text-white transition">Fechar</button>
+        </div>
+    </div>
+
     <!-- Modal for Editing URL -->
     <div id="edit-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
@@ -272,16 +293,16 @@
         </div>
     </div>
 
-    <!-- Application Logic 100% Real -->
+    <!-- Application Logic Com o Botão Olhinho -->
     <script>
-        // Começa limpo e real, apenas com o teste da amazon mapeado com 0 escans reais
         const defaultQRCodes = [
-            { id: 'amazon', url: 'https://www.amazon.com', category: 'Marketing', scans: 0, created: '05/06/2026' }
+            { id: 'exemplo1', url: 'https://amazon.com', category: 'Produto', scans: 0, created: '10/09/2026' }
         ];
 
         let qrCodes = JSON.parse(localStorage.getItem('qr_manager_codes')) || defaultQRCodes;
         let quickQrInstance = null;
         let modalQrInstance = null;
+        let viewQrInstance = null;
         let baseUrl = window.location.origin + window.location.pathname;
 
         window.onload = function() {
@@ -301,14 +322,9 @@
         }
 
         function updateMetrics() {
-            // QR Codes Ativos Reais
             document.getElementById('stat-total').innerText = qrCodes.length;
-            
-            // Soma real de todos os escans acumulados em todos os IDs
             const totalScans = qrCodes.reduce((acc, curr) => acc + (curr.scans || 0), 0);
             document.getElementById('stat-scans').innerText = totalScans.toLocaleString('pt-BR');
-            
-            // Número real de rotas mapeadas ativas
             document.getElementById('stat-routes').innerText = qrCodes.length;
         }
 
@@ -345,13 +361,17 @@
                             </div>
                             <p class="text-xs text-slate-400 truncate max-w-xs sm:max-w-md"><i class="fa-solid fa-arrow-right-to-bracket mr-1 text-slate-600"></i> ${item.url}</p>
                             <div class="flex items-center space-x-4 pt-1 text-xs text-slate-500">
-                                <span><i class="fa-solid fa-eye mr-1"></i> ${item.scans || 0} escans reais</span>
+                                <span><i class="fa-solid fa-eye mr-1"></i> ${item.scans || 0} escans</span>
                                 <span><i class="fa-regular fa-calendar mr-1"></i> ${item.created}</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex items-center space-x-2 w-full md:w-auto justify-end pt-2 md:pt-0 border-t border-slate-800/60 md:border-t-0">
+                        <button onclick="openViewModal('${item.id}')" title="Visualizar QR Code (Olhinho)" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 transition text-xs flex items-center space-x-1.5">
+                            <i class="fa-solid fa-eye"></i>
+                            <span class="hidden sm:inline">Ver QR</span>
+                        </button>
                         <button onclick="copyToClipboard('${fullLink}', 'Link completo copiado!')" title="Copiar Link para QR Code" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs flex items-center space-x-1.5">
                             <i class="fa-regular fa-copy"></i>
                             <span class="hidden sm:inline">Copiar Link</span>
@@ -413,7 +433,7 @@
                 id,
                 url,
                 category,
-                scans: 0, // Começa rigorosamente em zero de forma real
+                scans: 0,
                 created: new Date().toLocaleDateString('pt-BR')
             };
 
@@ -430,6 +450,34 @@
         function openNewModal() {
             document.getElementById('quick-id').focus();
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Funções do Modal "Olhinho" de Visualização
+        function openViewModal(id) {
+            const item = qrCodes.find(q => q.id === id);
+            if (!item) return;
+
+            document.getElementById('modal-view-id').innerText = `?id=${item.id}`;
+            document.getElementById('modal-view-url').innerText = item.url;
+
+            const modalViewEl = document.getElementById('modal-view-qrcode');
+            modalViewEl.innerHTML = '';
+            viewQrInstance = new QRCode(modalViewEl, {
+                text: `${baseUrl}?id=${item.id}`,
+                width: 160,
+                height: 160,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('view-modal').classList.remove('hidden');
+            document.getElementById('view-modal').classList.add('flex');
+        }
+
+        function closeViewModal() {
+            document.getElementById('view-modal').classList.remove('flex');
+            document.getElementById('view-modal').classList.add('hidden');
         }
 
         function deleteQRCode(id) {
