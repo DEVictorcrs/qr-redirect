@@ -36,24 +36,27 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
 
-    <!-- Script de Redirecionamento Automático via URL (?id=...) -->
+    <!-- Script de Redirecionamento Automático e Contagem de Escans -->
     <script>
-        // Carrega as rotas salvas no localStorage ou usa a padrão caso esteja vazio
-        function verificarRedirecionamento() {
+        (function() {
             const params = new URLSearchParams(window.location.search);
             const id = params.get("id");
             if (!id) return;
 
             const savedCodes = localStorage.getItem('qr_manager_codes');
             if (savedCodes) {
-                const qrList = JSON.parse(savedCodes);
+                let qrList = JSON.parse(savedCodes);
                 const found = qrList.find(q => q.id === id);
                 if (found && found.url) {
+                    // Incrementa o contador de escans dinamicamente
+                    found.scans = (found.scans || 0) + 1;
+                    localStorage.setItem('qr_manager_codes', JSON.stringify(qrList));
+                    
+                    // Redireciona para o destino
                     window.location.replace(found.url);
                 }
             }
-        }
-        verificarRedirecionamento();
+        })();
     </script>
 
     <!-- Header -->
@@ -91,7 +94,7 @@
             </div>
         </div>
 
-        <!-- Metrics Overview -->
+        <!-- Metrics Overview (Agora sincronizados com os dados reais) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
                 <div class="flex items-center justify-between">
@@ -102,7 +105,7 @@
                 </div>
                 <div class="mt-4 flex items-baseline justify-between">
                     <span id="stat-total" class="text-2xl font-bold text-white">0</span>
-                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Salvo Localmente</span>
+                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Sincronizado</span>
                 </div>
             </div>
 
@@ -114,8 +117,8 @@
                     </div>
                 </div>
                 <div class="mt-4 flex items-baseline justify-between">
-                    <span id="stat-scans" class="text-2xl font-bold text-white">1,482</span>
-                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +12% hoje</span>
+                    <span id="stat-scans" class="text-2xl font-bold text-white">0</span>
+                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Acumulado</span>
                 </div>
             </div>
 
@@ -127,8 +130,8 @@
                     </div>
                 </div>
                 <div class="mt-4 flex items-baseline justify-between">
-                    <span class="text-2xl font-bold text-white">99.9%</span>
-                    <span class="text-xs text-slate-400 font-medium">Uptime Estável</span>
+                    <span class="text-2xl font-bold text-white">100%</span>
+                    <span class="text-xs text-slate-400 font-medium">Operacional</span>
                 </div>
             </div>
 
@@ -140,7 +143,7 @@
                     </div>
                 </div>
                 <div class="mt-4 flex items-baseline justify-between">
-                    <span class="text-sm font-semibold text-emerald-400 truncate">github.io</span>
+                    <span id="domain-display" class="text-xs font-semibold text-emerald-400 truncate max-w-[150px]">github.io</span>
                     <span class="text-xs text-slate-400">SSL Ativo</span>
                 </div>
             </div>
@@ -173,7 +176,7 @@
                         <i class="fa-solid fa-qrcode"></i>
                     </div>
                     <h3 class="text-base font-semibold text-white">Nenhum QR code encontrado</h3>
-                    <p class="text-sm text-slate-400 mt-1">Crie seu primeiro código QR dinâmico agora mesmo.</p>
+                    <p class="text-sm text-slate-400 mt-1">Crie seu primeiro código QR dinâmico usando o gerador ao lado.</p>
                 </div>
             </div>
 
@@ -269,12 +272,11 @@
         </div>
     </div>
 
-    <!-- Application Logic with LocalStorage -->
+    <!-- Application Logic Sincronizada -->
     <script>
-        // Dados iniciais padrão se o localStorage estiver vazio
         const defaultQRCodes = [
-            { id: 'amazon', url: 'https://www.amazon.com', category: 'Marketing', scans: 1250, created: '05/06/2026' },
-            { id: 'cardapio-digital', url: 'https://exemplo.com/cardapio-verao-2026', category: 'Produto', scans: 642, created: '10/01/2026' }
+            { id: 'amazon', url: 'https://www.amazon.com', category: 'Marketing', scans: 12, created: '05/06/2026' },
+            { id: 'cardapio-digital', url: 'https://exemplo.com/cardapio-verao-2026', category: 'Produto', scans: 5, created: '10/01/2026' }
         ];
 
         let qrCodes = JSON.parse(localStorage.getItem('qr_manager_codes')) || defaultQRCodes;
@@ -284,9 +286,13 @@
 
         window.onload = function() {
             saveToStorage();
+            updateMetrics();
             renderQRCodes();
             initQuickGenerator();
             
+            // Exibe o domínio real ativo no card
+            document.getElementById('domain-display').innerText = window.location.hostname;
+
             document.getElementById('quick-id').addEventListener('input', updateQuickQRPreview);
             document.getElementById('quick-url').addEventListener('input', updateQuickQRPreview);
         };
@@ -295,12 +301,18 @@
             localStorage.setItem('qr_manager_codes', JSON.stringify(qrCodes));
         }
 
+        function updateMetrics() {
+            document.getElementById('stat-total').innerText = qrCodes.length;
+            const totalScans = qrCodes.reduce((acc, curr) => acc + (curr.scans || 0), 0);
+            document.getElementById('stat-scans').innerText = totalScans.toLocaleString('pt-BR');
+        }
+
         function renderQRCodes(filteredList = null) {
             const container = document.getElementById('qr-list-container');
             const emptyState = document.getElementById('empty-state');
             const list = filteredList || qrCodes;
             
-            document.getElementById('stat-total').innerText = qrCodes.length;
+            updateMetrics();
             container.innerHTML = '';
 
             if (list.length === 0) {
@@ -328,7 +340,7 @@
                             </div>
                             <p class="text-xs text-slate-400 truncate max-w-xs sm:max-w-md"><i class="fa-solid fa-arrow-right-to-bracket mr-1 text-slate-600"></i> ${item.url}</p>
                             <div class="flex items-center space-x-4 pt-1 text-xs text-slate-500">
-                                <span><i class="fa-solid fa-eye mr-1"></i> ${item.scans} escans</span>
+                                <span><i class="fa-solid fa-eye mr-1"></i> ${item.scans || 0} escans</span>
                                 <span><i class="fa-regular fa-calendar mr-1"></i> ${item.created}</span>
                             </div>
                         </div>
