@@ -38,22 +38,22 @@
 
     <!-- Script de Redirecionamento Automático via URL (?id=...) -->
     <script>
-        // Mapeamento dinâmico centralizado de destinos
-        const rotasRedirecionamento = {
-            "amazon": "https://www.amazon.com",
-            "cardapio-digital": "https://exemplo.com/cardapio-verao-2026",
-            "promocao-insta": "https://instagram.com/suamarca",
-            "pesquisa-satisfacao": "https://forms.gle/exemploSatisfacao"
-        };
-
-        // Executa imediatamente ao carregar a página
-        (function() {
+        // Carrega as rotas salvas no localStorage ou usa a padrão caso esteja vazio
+        function verificarRedirecionamento() {
             const params = new URLSearchParams(window.location.search);
             const id = params.get("id");
-            if (id && rotasRedirecionamento[id]) {
-                window.location.replace(rotasRedirecionamento[id]);
+            if (!id) return;
+
+            const savedCodes = localStorage.getItem('qr_manager_codes');
+            if (savedCodes) {
+                const qrList = JSON.parse(savedCodes);
+                const found = qrList.find(q => q.id === id);
+                if (found && found.url) {
+                    window.location.replace(found.url);
+                }
             }
-        })();
+        }
+        verificarRedirecionamento();
     </script>
 
     <!-- Header -->
@@ -93,7 +93,7 @@
 
         <!-- Metrics Overview -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">QR Codes Ativos</span>
                     <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
@@ -102,11 +102,11 @@
                 </div>
                 <div class="mt-4 flex items-baseline justify-between">
                     <span id="stat-total" class="text-2xl font-bold text-white">0</span>
-                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Atualizado</span>
+                    <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Salvo Localmente</span>
                 </div>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total de Escans</span>
                     <div class="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center">
@@ -119,7 +119,7 @@
                 </div>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Redirecionamentos</span>
                     <div class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
@@ -132,7 +132,7 @@
                 </div>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Domínio Ativo</span>
                     <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
@@ -165,9 +165,7 @@
                 </div>
 
                 <!-- List Container -->
-                <div id="qr-list-container" class="space-y-4">
-                    <!-- Dynamic Items -->
-                </div>
+                <div id="qr-list-container" class="space-y-4"></div>
 
                 <!-- Empty State -->
                 <div id="empty-state" class="hidden text-center py-16 bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl">
@@ -176,10 +174,6 @@
                     </div>
                     <h3 class="text-base font-semibold text-white">Nenhum QR code encontrado</h3>
                     <p class="text-sm text-slate-400 mt-1">Crie seu primeiro código QR dinâmico agora mesmo.</p>
-                    <button onclick="openNewModal()" class="mt-4 inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>Adicionar QR Code</span>
-                    </button>
                 </div>
             </div>
 
@@ -218,7 +212,6 @@
                             </select>
                         </div>
 
-                        <!-- Visual QR Canvas Preview Area -->
                         <div class="pt-2">
                             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">QR Code Preview Dinâmico</label>
                             <div id="qr-preview-box" class="w-full aspect-square bg-slate-950 border border-slate-800 rounded-2xl flex flex-col items-center justify-center p-4 relative overflow-hidden group">
@@ -233,22 +226,11 @@
                         </button>
                     </form>
                 </div>
-
-                <!-- Quick Help / Instructions Card -->
-                <div class="bg-gradient-to-br from-slate-900 to-indigo-950/30 border border-slate-800 rounded-2xl p-5">
-                    <h4 class="text-sm font-bold text-white flex items-center mb-2">
-                        <i class="fa-solid fa-circle-info text-indigo-400 mr-2"></i>
-                        Como testar com a Amazon?
-                    </h4>
-                    <p class="text-xs text-slate-400 leading-relaxed">
-                        Crie um QR code apontando para a URL completa: <code class="text-indigo-300 font-mono">https://seu-usuario.github.io/qr-redirect/?id=amazon</code>. Ao ler o código, o sistema redirecionará direto para a Amazon.
-                    </p>
-                </div>
             </div>
         </div>
     </main>
 
-    <!-- Modal for Detailed View / Editing URL -->
+    <!-- Modal for Editing URL -->
     <div id="edit-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
             <div class="flex items-center justify-between">
@@ -287,26 +269,31 @@
         </div>
     </div>
 
-    <!-- Application Logic -->
+    <!-- Application Logic with LocalStorage -->
     <script>
-        let qrCodes = [
+        // Dados iniciais padrão se o localStorage estiver vazio
+        const defaultQRCodes = [
             { id: 'amazon', url: 'https://www.amazon.com', category: 'Marketing', scans: 1250, created: '05/06/2026' },
-            { id: 'cardapio-digital', url: 'https://exemplo.com/cardapio-verao-2026', category: 'Produto', scans: 642, created: '10/01/2026' },
-            { id: 'promocao-insta', url: 'https://instagram.com/suamarca', category: 'Social', scans: 512, created: '14/02/2026' },
-            { id: 'pesquisa-satisfacao', url: 'https://forms.gle/exemploSatisfacao', category: 'Marketing', scans: 328, created: '01/03/2026' }
+            { id: 'cardapio-digital', url: 'https://exemplo.com/cardapio-verao-2026', category: 'Produto', scans: 642, created: '10/01/2026' }
         ];
 
+        let qrCodes = JSON.parse(localStorage.getItem('qr_manager_codes')) || defaultQRCodes;
         let quickQrInstance = null;
         let modalQrInstance = null;
         let baseUrl = window.location.origin + window.location.pathname;
 
         window.onload = function() {
+            saveToStorage();
             renderQRCodes();
             initQuickGenerator();
             
             document.getElementById('quick-id').addEventListener('input', updateQuickQRPreview);
             document.getElementById('quick-url').addEventListener('input', updateQuickQRPreview);
         };
+
+        function saveToStorage() {
+            localStorage.setItem('qr_manager_codes', JSON.stringify(qrCodes));
+        }
 
         function renderQRCodes(filteredList = null) {
             const container = document.getElementById('qr-list-container');
@@ -414,15 +401,13 @@
             };
 
             qrCodes.unshift(newQR);
+            saveToStorage();
             renderQRCodes();
-            
-            // Atualiza também o objeto de rotas da página em memória
-            rotasRedirecionamento[id] = url;
 
             document.getElementById('quick-form').reset();
             initQuickGenerator();
             
-            showToast("Criado com sucesso!", `O ID '?id=${id}' foi ativado para redirecionar.`);
+            showToast("Criado com sucesso!", `O ID '?id=${id}' foi salvo e ativado.`);
         }
 
         function openNewModal() {
@@ -433,7 +418,7 @@
         function deleteQRCode(id) {
             if (confirm(`Deseja realmente remover o ID '${id}'?`)) {
                 qrCodes = qrCodes.filter(q => q.id !== id);
-                delete rotasRedirecionamento[id];
+                saveToStorage();
                 renderQRCodes();
                 showToast("Removido", "O QR code foi excluído com sucesso.");
             }
@@ -476,10 +461,10 @@
             const item = qrCodes.find(q => q.id === id);
             if (item) {
                 item.url = newUrl;
-                rotasRedirecionamento[id] = newUrl; // Atualiza a regra de redirecionamento
+                saveToStorage();
                 renderQRCodes();
                 closeEditModal();
-                showToast("Atualizado!", `O destino do QR code '?id=${id}' foi atualizado.`);
+                showToast("Atualizado!", `O destino do QR code '?id=${id}' foi salvo.`);
             }
         }
 
