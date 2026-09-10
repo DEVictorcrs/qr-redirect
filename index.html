@@ -36,7 +36,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
 
-    <!-- Script de Redirecionamento Automático via Google Sheets API -->
+    <!-- Script de Redirecionamento Automático com Anti-Cache Global -->
     <script>
         (async function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -47,7 +47,10 @@
 
                 if (SHEET_API_URL) {
                     try {
-                        const response = await fetch(`${SHEET_API_URL}/id/${qrId}`);
+                        // Adicionamos um parâmetro de tempo aleatório (?_t=...) para proibir o navegador e a API de guardarem cache antigo
+                        const response = await fetch(`${SHEET_API_URL}/id/${qrId}?_t=${new Date().getTime()}`, {
+                            cache: 'no-store'
+                        });
                         const data = await response.json();
                         
                         if (data && data.length > 0 && data[0].url) {
@@ -451,7 +454,7 @@
             const label = document.getElementById('quick-label').value.trim();
             const id = document.getElementById('quick-id').value.trim().toLowerCase().replace(/\s+/g, '-');
             const url = document.getElementById('quick-url').value.trim();
-            const category = document.getElementById('quick-category.value') || document.getElementById('quick-category').value;
+            const category = document.getElementById('quick-category').value;
 
             if (!id || !url || !label) return;
 
